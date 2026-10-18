@@ -1,4 +1,4 @@
-name: Local Portable Build
+name: Local MSI Build
 
 on:
   workflow_dispatch:
@@ -26,27 +26,14 @@ jobs:
         run: npm ci
 
       # 本地打包配置只关闭 updater 签名产物，不需要仓库 secrets。
-      - name: Build app
+      - name: Build MSI
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-        run: npm run tauri -- build --config src-tauri/tauri.local.conf.json
+        run: npm run tauri -- build --config src-tauri/tauri.local.conf.json --bundles msi
 
-      - name: Package Windows portable ZIP
-        shell: pwsh
-        run: .\scripts\package-portable.ps1 -Version 1.4.4 -OutputDir dist/portable
-
-      - name: Upload portable ZIP
+      - name: Upload MSI
         uses: actions/upload-artifact@v4
         with:
-          name: CLI-Manager-Windows-x64-portable
-          path: dist/portable/*.zip
+          name: CLI-Manager-Windows-msi
+          path: src-tauri/target/release/bundle/msi/*.msi
           if-no-files-found: error
-
-      - name: Upload installers
-        uses: actions/upload-artifact@v4
-        with:
-          name: CLI-Manager-Windows-installers
-          path: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
-          if-no-files-found: warn
