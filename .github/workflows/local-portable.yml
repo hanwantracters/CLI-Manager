@@ -1,0 +1,52 @@
+name: Local Portable Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - build/283-windows-portable
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 本地打包配置只关闭 updater 签名产物，不需要仓库 secrets。
+      - name: Build app
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: npm run tauri -- build --config src-tauri/tauri.local.conf.json
+
+      - name: Package Windows portable ZIP
+        shell: pwsh
+        run: .\scripts\package-portable.ps1 -Version 1.4.4 -OutputDir dist/portable
+
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: CLI-Manager-Windows-x64-portable
+          path: dist/portable/*.zip
+          if-no-files-found: error
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: CLI-Manager-Windows-installers
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: warn
